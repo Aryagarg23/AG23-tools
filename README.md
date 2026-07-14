@@ -1,30 +1,31 @@
-# AG23-tools: Shit which bothers us, and scripts to fix the annoyance
+# AG23-tools: Stuff which bothers me during setup. These scripts save time sometimes. Help me make sure the issues are with the code not the setup.
 
-This repository is a collection of annoying setup issues, environment quirks, and OS bugs we've encountered during development, along with the custom scripts we built to solve them.
+This repository is a collection of annoying, and bandaid patch work layers to make it seem seamless.
 
 ---
 
-## 1. WSL 2 vLLM Background Serving (Directory: `vllm-service/`)
+## 1. WSL 2 vLLM Background Server (`vllm-service/`)
 
-### The Annoyances:
-*   **The NTFS Sluggishness**: Running vLLM, its virtual environment, or model cache from Windows mounts (`/mnt/c/...`) inside WSL is incredibly slow due to the 9p translation layer, but running vLLM natively in WSL makes it hard to manage and edit configurations from Windows.
-*   **The Port Sharing Headaches**: WSL NAT mode makes exposing ports to the LAN from Windows a nightmare of dynamic IP updates and port forwarding.
-*   **Systemd Servicing**: Keeping a model serving in the background all the time, starting it headlessly on boot, and managing it without keeping terminal sessions open.
-*   **PowerShell Array Gotcha**: Using standard `Get-Content` in PowerShell filters arrays on regex checks, causing `.wslconfig` lines to duplicate infinitely.
+Serves vLLM inside WSL while letting you edit model configs on the Windows side. Exposes the server to the LAN all the time.
 
-### The Fix:
-A split-config launcher that keeps all execution files, cache, and virtual environments natively inside the WSL ext4 partition (`/home/arya/vllm-service/`) for maximum speed, but allows you to edit settings and control systemd service states directly from Windows using a single PowerShell CLI wrapper.
+### Files
+*   `config.json`: Model parameters. Edit this to swap models or context lengths.
+*   `env-config.json`: Distro names, paths, and ports.
+*   `manage-vllm.ps1`: Windows controller. Run this.
+*   `manage-vllm.sh`: Bash controller if you are running inside WSL.
+*   `launch.py`: Launcher script that reads the json configs and starts the server inside WSL.
 
-#### Quick Start:
-Navigate to the tool directory:
+### How to use it:
+Open PowerShell in the `vllm-service` directory:
 ```powershell
 cd C:\Users\arya\source\repos\AG23-tools\vllm-service
 ```
-*   **Install** (Sets up native WSL environment, configures mirrored networking, creates firewall exceptions):
+
+*   **Setup / Install**:
     ```powershell
     .\manage-vllm.ps1 install
     ```
-*   **Register Boot Task** (Registers task scheduler to boot WSL/vLLM on logon):
+*   **Run at startup**:
     ```powershell
     .\manage-vllm.ps1 register-autostart
     ```
@@ -33,19 +34,17 @@ cd C:\Users\arya\source\repos\AG23-tools\vllm-service
     .\manage-vllm.ps1 start
     .\manage-vllm.ps1 stop
     ```
-*   **Diagnostics** (Enumerate LAN IPs, check firewall status, check active VRAM & load, test API):
-    ```powershell
-    .\manage-vllm.ps1 test
-    ```
-*   **Logs**:
+*   **Check logs**:
     ```powershell
     .\manage-vllm.ps1 status
+    ```
+*   **Check if it is working**:
+    ```powershell
+    .\manage-vllm.ps1 test
     ```
 
 ---
 
-## Future Additions
-Any future tools added to `AG23-tools/` should follow the same pattern:
-1. Identify the environment annoyance.
-2. Put the script to fix it in its own subdirectory.
-3. Keep the core scripts protected from AI agent modifications by documenting them in the [.agents/AGENTS.md](file:///C:/Users/arya/source/repos/AG23-tools/.agents/AGENTS.md) guidelines.
+## Adding more tools
+1. Put the scripts in their own folder.
+2. Keep agent guidelines updated in `.agents/AGENTS.md`.
