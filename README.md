@@ -1,4 +1,4 @@
-# AG23-tools: Stuff which bothers me during setup. These scripts save time sometimes. Help me make sure the issues are with the code not the setup.
+Stuff which bothers me. These scripts save time sometimes. Help me make sure the issues are with the code not the setup.
 
 This repository is a collection of annoying, and bandaid patch work layers to make it seem seamless.
 
