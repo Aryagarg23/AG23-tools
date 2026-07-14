@@ -12,7 +12,7 @@ def main():
         sys.exit(1)
         
     try:
-        with open(config_path, "r") as f:
+        with open(config_path, "r", encoding="utf-8-sig") as f:
             config = json.load(f)
     except Exception as e:
         print(f"Error: Failed to parse config.json: {e}", file=sys.stderr)

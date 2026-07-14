@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory=$true, Position=0)]
-    [ValidateSet("install", "start", "stop", "status", "register-autostart", "test", "uninstall")]
+    [ValidateSet("install", "start", "stop", "status", "register-autostart", "test", "tray", "uninstall")]
     [string]$Action
 )
 
@@ -127,7 +127,7 @@ WorkingDirectory=$wslServiceDir
 ExecStart=$venvPath/bin/python $wslServiceDir/launch.py
 Restart=always
 RestartSec=10
-Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONUNBUFFERED=1 VLLM_DISABLE_FLASHINFER=1 VLLM_ATTENTION_BACKEND=TORCH_SDPA VLLM_ENGINE_READY_TIMEOUT_S=300 VLLM_WORKER_MULTIPROC_METHOD=spawn
 
 [Install]
 WantedBy=multi-user.target
@@ -166,12 +166,21 @@ WantedBy=multi-user.target
         Copy-FileToWsl -WindowsPath "$PSScriptRoot\config.json" -WslDestPath "$wslServiceDir/config.json"
         Copy-FileToWsl -WindowsPath "$PSScriptRoot\env-config.json" -WslDestPath "$wslServiceDir/env-config.json"
         Copy-FileToWsl -WindowsPath "$PSScriptRoot\..\.agents\AGENTS.md" -WslDestPath "$wslServiceDir/.agents/AGENTS.md"
+        Copy-FileToWsl -WindowsPath "$PSScriptRoot\launch.py" -WslDestPath "$wslServiceDir/launch.py"
         
         Write-Host "[*] Starting vLLM Service..." -ForegroundColor Cyan
         wsl -d $distro -u root systemctl start vllm
         Start-Sleep -Seconds 2
         Write-Host "[+] Service started." -ForegroundColor Green
-        Write-Host "[*] Use '.\manage-vllm.ps1 status' to check logs." -ForegroundColor Yellow
+        
+        # Spawn system tray app automatically if not already running
+        $existing = Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object { $_.CommandLine -like "*vllm-tray.ps1*" }
+        if (-not $existing) {
+            Write-Host "[*] Spawning System Tray App..." -ForegroundColor Cyan
+            Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Sta -File `"$PSScriptRoot\vllm-tray.ps1`"" -WindowStyle Hidden
+        } else {
+            Write-Host "[*] System Tray App is already running." -ForegroundColor Gray
+        }
     }
     
     "stop" {
@@ -196,7 +205,7 @@ WantedBy=multi-user.target
     "register-autostart" {
         Write-Host "[*] Registering vLLM Autostart Task..." -ForegroundColor Cyan
         try {
-            $action = New-ScheduledTaskAction -Execute "wsl.exe" -Argument "-d $distro -u root systemctl start vllm"
+            $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$PSScriptRoot\manage-vllm.ps1`" start"
             $trigger = New-ScheduledTaskTrigger -AtLogon -User "$env:USERNAME"
             $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
             $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive
@@ -280,10 +289,27 @@ WantedBy=multi-user.target
         }
     }
     
+    "tray" {
+        $existing = Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object { $_.CommandLine -like "*vllm-tray.ps1*" }
+        if (-not $existing) {
+            Write-Host "[*] Launching vLLM System Tray App in background..." -ForegroundColor Cyan
+            Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Sta -File `"$PSScriptRoot\vllm-tray.ps1`"" -WindowStyle Hidden
+        } else {
+            Write-Host "[*] System Tray App is already running." -ForegroundColor Gray
+        }
+    }
+    
     "uninstall" {
         Write-Host "=========================================" -ForegroundColor Red
         Write-Host "       Uninstalling vLLM Service         " -ForegroundColor Red
         Write-Host "=========================================" -ForegroundColor Red
+        
+        # Kill any running tray icons
+        $existing = Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" | Where-Object { $_.CommandLine -like "*vllm-tray.ps1*" }
+        if ($existing) {
+            Write-Host "[*] Closing System Tray App..." -ForegroundColor Cyan
+            $existing | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+        }
         
         # Stop service
         Write-Host "[1/4] Stopping and disabling WSL service..." -ForegroundColor Cyan
