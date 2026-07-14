@@ -17,6 +17,11 @@ const TASKS = {
     description: 'Implement a rate limiter module in lib/rate-limiter.js. It must support high-concurrency requests and limit them correctly.',
     source: './tasks/task-limiter',
   },
+  'task-round': {
+    name: 'Banker Rounding',
+    description: 'Implement and export roundValue(x) in lib/round.js. It rounds the number x to the nearest integer and returns it.',
+    source: './tasks/task-round',
+  },
 };
 
 const taskId = process.argv[2] || 'task-leap';

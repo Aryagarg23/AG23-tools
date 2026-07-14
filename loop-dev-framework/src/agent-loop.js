@@ -4,13 +4,46 @@ import { execSync } from 'child_process';
 import { recordOutcome } from 'agent-trace-outcomes';
 import { LLMClient } from './llm-client.js';
 
+// --- Mechanical lesson derivation (issue #1) ---------------------------------
+// The lesson is NOT authored by the agent or hardcoded by task. It is derived from
+// observable facts: the failing test's assertion and the diff that fixed it.
+// "The fix (and the failure) is most of the lesson."
+function firstAssertion(output) {
+  if (!output) return '';
+  const lines = output.split('\n').map(l => l.trim()).filter(Boolean);
+  const hit = lines.find(l => /assert|expected|should|AssertionError|Error:/i.test(l));
+  return (hit || lines[0] || '')
+    .replace(/^\[.*?\]\s*(Test failed:)?\s*/i, '') // strip runner prefixes like "[Test Runner] Test failed:"
+    .replace(/\s+/g, ' ')
+    .slice(0, 200);
+}
+function diffOneLiner(diff) {
+  if (!diff) return '';
+  const changed = diff.split('\n').filter(l =>
+    (l.startsWith('+') || l.startsWith('-')) && !l.startsWith('+++') && !l.startsWith('---'));
+  return changed.slice(0, 2).join(' ').replace(/\s+/g, ' ').slice(0, 160);
+}
+function deriveLesson({ testPassed, failingOutput, priorFailOutput, diff }) {
+  if (!testPassed) {
+    const a = firstAssertion(failingOutput);
+    return a ? `Failed the hidden test: ${a}` : 'Attempt failed the hidden test.';
+  }
+  const a = firstAssertion(priorFailOutput);
+  if (a) {
+    const fix = diffOneLiner(diff);
+    return `Constraint learned from a prior failure: ${a}${fix ? ` — fixed via: ${fix}` : ''}`;
+  }
+  return 'Verified on the first attempt (no prior failure to learn from).';
+}
+
 export async function runAgentLoop({
   taskName,
   taskDescription,
   workspaceDir,
   lessons = [],
   maxIterations = 5,
-  testCommand = 'node test.js'
+  testCommand = 'node test.js',
+  hiddenPaths = ['test.js']
 }) {
   console.log(`\n=== Starting Agent Loop for: ${taskName} ===`);
   if (lessons.length > 0) {
@@ -24,6 +57,7 @@ export async function runAgentLoop({
   let isSuccessful = false;
   let iterations = 0;
   let recordedRecord = null;
+  let lastFailOutput = ''; // failing test output from the previous iteration (for lesson derivation)
 
   // Prepare workspace directory if it doesn't exist
   if (!fs.existsSync(workspaceDir)) {
@@ -34,6 +68,10 @@ export async function runAgentLoop({
   const systemPrompt = `
 You are an autonomous AI coding agent operating in a Loop-Driven Development environment.
 Your goal is to solve the task described by the user.
+
+A hidden automated test suite grades your solution — you cannot see it, but its output
+(including assertion failures) appears in the Execution History after each attempt. Those
+failures reveal the exact requirements; read them carefully and adjust.
 
 Available Actions:
 - "write_file": Write content to a file. Requires "path" and "content" fields.
@@ -68,6 +106,10 @@ Do not repeat these failures.
         const fullPath = path.join(dir, file);
         const relPath = path.relative(workspaceDir, fullPath);
         if (relPath.startsWith('node_modules') || relPath.startsWith('.git') || relPath.startsWith('.agent-trace')) {
+          return;
+        }
+        // Hide the grader from the agent so tasks can genuinely fail first (issue #3).
+        if (hiddenPaths.includes(path.basename(relPath))) {
           return;
         }
         if (fs.statSync(fullPath).isDirectory()) {
@@ -151,12 +193,16 @@ What is your next action?
       // Commit changes to Git to associate the check with a specific SHA
       let commitSha = '';
       let iterationDiff = '';
+      let sourceDiff = ''; // diff scoped to the agent's file (excludes committed .agent-trace records)
       try {
         execSync('git add .', { cwd: workspaceDir, stdio: 'ignore' });
         const safeThought = response.thought.replace(/[\\"\n\r]/g, ' ').substring(0, 60);
         execSync(`git commit -m "agent: iteration ${iterations} - ${safeThought}"`, { cwd: workspaceDir, stdio: 'ignore' });
         commitSha = execSync('git rev-parse HEAD', { cwd: workspaceDir }).toString().trim();
         iterationDiff = execSync('git diff HEAD~1', { cwd: workspaceDir }).toString();
+        try {
+          sourceDiff = execSync(`git diff HEAD~1 -- "${response.path}"`, { cwd: workspaceDir }).toString();
+        } catch { sourceDiff = iterationDiff; }
         console.log(`[Workspace] Committed iteration changes. SHA: ${commitSha.substring(0, 7)}`);
       } catch (err) {
         console.error('[Workspace] Git commit failed:', err.message);
@@ -171,17 +217,25 @@ What is your next action?
         testPassed = true;
         console.log('✓ Verification tests passed!');
       } catch (err) {
-        testOutput = err.stdout ? err.stdout.toString() : err.message;
+        // Capture BOTH streams: assertion messages usually go to stderr, and an agent that
+        // can't see WHY it failed cannot recover (observed: 5/5 failures with stdout only).
+        const out = err.stdout ? err.stdout.toString() : '';
+        const errOut = err.stderr ? err.stderr.toString() : '';
+        testOutput = [out, errOut].filter(Boolean).join('\n').trim() || err.message;
         console.log('✗ Verification tests failed.');
       }
 
-      // Record outcome for this specific commit
+      // Record outcome for this specific commit.
       try {
-        const isLeap = taskName.includes('Leap') || taskName.includes('leap');
-        const appliesToPath = isLeap ? 'lib/leap.js' : 'lib/rate-limiter.js';
-        const lessonText = isLeap
-          ? (testPassed ? 'Leap year exception handling works correctly.' : 'Leap years must be divisible by 4, not 100, unless 400.')
-          : (testPassed ? 'Lock-based serialized loops resolve async rate-limiting race conditions.' : 'Standard counter increments suffer from concurrency race conditions.');
+        // Task-agnostic: the lesson applies to the file the agent actually wrote, and its text
+        // is DERIVED from the observed failure + fix — never hardcoded (issue #1).
+        const appliesToPath = response.path;
+        const lessonText = deriveLesson({
+          testPassed,
+          failingOutput: testOutput,
+          priorFailOutput: lastFailOutput,
+          diff: sourceDiff
+        });
 
         const iterationRecord = await recordOutcome({
           intent: `Solve task: ${taskName} (Iter ${iterations})`,
@@ -220,6 +274,10 @@ What is your next action?
         action: `write_file (${response.path})`,
         result: testPassed ? 'Success: tests passed.' : `Failure:\n${testOutput}`
       });
+
+      if (!testPassed) {
+        lastFailOutput = testOutput; // remembered so the fixing iteration can derive its lesson
+      }
 
       if (testPassed) {
         isSuccessful = true;

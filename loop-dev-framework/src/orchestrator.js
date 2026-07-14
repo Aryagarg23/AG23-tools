@@ -58,6 +58,14 @@ export async function runExperiment() {
       description: 'Implement isLeapYear in lib/leap.js. It must handle leap years correctly, including the century exclusion rule and the 400-year exception rule.',
       source: './tasks/task-leap',
       paths: ['lib/leap.js']
+    },
+    {
+      id: 'task-round',
+      name: 'Banker Rounding',
+      // Deliberately underspecified: the tie-breaking rule lives only in the hidden test.
+      description: 'Implement and export roundValue(x) in lib/round.js. It rounds the number x to the nearest integer and returns it.',
+      source: './tasks/task-round',
+      paths: ['lib/round.js']
     }
   ];
 
