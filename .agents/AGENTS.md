@@ -11,7 +11,7 @@ This workspace contains a collection of developer utility tools (AG23-tools).
   - `vllm-service/launch.py`: Python script run inside WSL to parse `config.json` and start vLLM.
   - `vllm-service/manage-vllm.ps1` / `vllm-service/manage-vllm.sh`: Service control scripts.
 
-## Agent Behavior Guidelines
+## Agent Behavior Guidelines 
 
 ### 1. STRICT Policy: Restriction on Modifying Core Scripts
 - > [!IMPORTANT]

@@ -56,7 +56,7 @@ def main():
     if os.path.exists(vllm_path):
         cmd[0] = vllm_path
         
-    # Execute and replace current process
+    # Execute and replace current processes
     os.execv(cmd[0], cmd)
 
 if __name__ == "__main__":
