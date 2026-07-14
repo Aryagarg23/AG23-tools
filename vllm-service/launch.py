@@ -39,6 +39,10 @@ def main():
         if isinstance(val, bool):
             if val:
                 cmd.append(cli_flag)
+        elif isinstance(val, (dict, list)):
+            # Nested values (e.g. compilation_config) must be passed as JSON,
+            # not str() which would emit a Python-dict repr vLLM can't parse.
+            cmd.extend([cli_flag, json.dumps(val)])
         elif val is not None:
             cmd.extend([cli_flag, str(val)])
             

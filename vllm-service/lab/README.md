@@ -18,6 +18,7 @@ Session goal: get vLLM serving on the RTX 3090 Ti, then improve throughput/concu
 | File / thing | Change | State |
 | --- | --- | --- |
 | `config.json` | `kv_cache_dtype` fp8 → auto (fp8 needs SM89+; 3090 Ti is SM86) | committed |
+| `config.json` + `launch.py` | promoted `cuda-graphs` profile: dropped `enforce_eager`, added bounded `compilation_config`, util 0.91; `launch.py` now JSON-encodes nested config values | committed |
 | venv | FlashInfer uninstalled (needs a CUDA toolkit WSL lacks) | applied + scripted |
 | `manage-vllm.ps1` / `.sh` | uninstall FlashInfer on install; env `VLLM_USE_FLASHINFER_SAMPLER=0`; drop 2 dead env vars; test hits 127.0.0.1 not localhost | committed |
 | `launch.py` | read config as utf-8-sig (BOM tolerant) | committed (via earlier merge) |
@@ -80,7 +81,11 @@ un-compiled. Removing it (with capture bounded to `FULL_DECODE_ONLY` + `[1,2,4,8
 so graph memory is only 0.07 GiB) gives ~4.4x single-stream and ~2.7x 16-concurrent
 throughput, *and* more KV cache (util 0.91). Output verified correct: normal chat and
 `qwen3_coder` tool-calls both still work. This profile is strictly better than baseline
-on this GPU with no downside found — a candidate to promote to `config.json`.
+on this GPU with no downside found.
+
+**Promoted to `config.json` on 2026-07-14.** The live service now runs this config
+(measured 156.8 tok/s single / 1511 tok/s @ 16 concurrent, 34,048-token KV cache). The
+old `enforce_eager` config is the documented rollback (this profile + git history).
 
 ---
 
@@ -102,8 +107,8 @@ Sources: [vLLM #26431](https://github.com/vllm-project/vllm/issues/26431) ·
 
 ## Open questions / next
 
-- [ ] Measure the `cuda-graphs` profile: does it fit the ~1.5 GB headroom, and how much
-      throughput does it actually add?
+- [x] Measure the `cuda-graphs` profile — done: fits (graphs 0.03–0.07 GiB), ~4.4x
+      single / ~2.7–2.9x @16 concurrent. Promoted to `config.json`.
 - [ ] Try `max_model_len` 8192 as a profile — roughly doubles worst-case long-context
       concurrency.
 - [ ] int8 KV quant (`kv_cache_dtype: int8_*`) — only if a supported backend accepts it

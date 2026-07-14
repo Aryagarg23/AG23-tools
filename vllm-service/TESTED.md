@@ -58,7 +58,7 @@ FlashAttention backend.
   "host": "0.0.0.0",
   "port": 8000,
   "tensor_parallel_size": 1,
-  "gpu_memory_utilization": 0.88,
+  "gpu_memory_utilization": 0.91,
   "max_model_len": 16384,
   "max_num_seqs": 32,
   "max_num_batched_tokens": 4096,
@@ -67,9 +67,12 @@ FlashAttention backend.
   "kv_cache_dtype": "auto",
   "enable_auto_tool_choice": true,
   "tool_call_parser": "qwen3_coder",
-  "enforce_eager": true
+  "compilation_config": {"cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes": [1, 2, 4, 8, 16]}
 }
 ```
+
+Note: `enforce_eager` was removed on 2026-07-14 after benchmarking showed it disabled
+torch.compile and CUDA graphs, costing ~4x throughput. See `lab/README.md`.
 
 ## Service environment (systemd unit)
 
@@ -81,8 +84,12 @@ Environment=PYTHONUNBUFFERED=1 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_WORKER_MULTIPR
 
 - Attention backend selected: `FLASH_ATTN` (prebuilt, no runtime compile).
 - Sampler: native (FlashInfer sampler disabled via env var).
-- Model load: ~15.7 GiB weights, ~117 s from local cache.
-- KV cache: ~2.2 GiB, ~23,584 tokens, ~1.4x concurrency at 16384-token context.
+- torch.compile (inductor) + CUDA graphs on; graph capture bounded to
+  `FULL_DECODE_ONLY` + `[1,2,4,8,16]`, costing ~0.03 GiB.
+- Model load: ~15.7 GiB weights.
+- KV cache: ~34,048 tokens, ~2.08x concurrency at 16384-token context.
+- Throughput: ~157 tok/s single-stream, ~1510 tok/s aggregate at 16 concurrent
+  (all requests succeed).
 
 ## What was tested
 
@@ -93,6 +100,7 @@ Environment=PYTHONUNBUFFERED=1 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_WORKER_MULTIPR
 | `POST /v1/chat/completions` (plain prompt) | pass |
 | `POST /v1/chat/completions` with tools (`qwen3_coder` parser) | pass, returns a `tool_calls` response |
 | `manage-vllm.ps1 test` | pass (local API reachable, ~15 ms) |
+| Throughput (`lab/bench.py`) | pass — 157 tok/s single, 1510 tok/s @ 16 concurrent |
 
 Not covered: the Windows Firewall rule for LAN access (needs an elevated
 `manage-vllm.ps1 install`), sustained multi-client load, and models other than the one
