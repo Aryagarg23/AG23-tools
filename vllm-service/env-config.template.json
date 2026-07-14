@@ -1,0 +1,7 @@
+{
+  "wsl_distro": "Ubuntu",
+  "wsl_service_dir": "/home/username/vllm-service",
+  "wsl_venv_path": "/home/username/vllm-service/.venv",
+  "firewall_rule_name": "vLLM-Service-Port-8000",
+  "scheduled_task_name": "vLLM-Service-Autostart"
+}

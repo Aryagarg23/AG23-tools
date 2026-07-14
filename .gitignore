@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Local Environment Configurations
+# (Contains local system paths specific to individual machines)
+vllm-service/env-config.json
+
+# Editors / OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
