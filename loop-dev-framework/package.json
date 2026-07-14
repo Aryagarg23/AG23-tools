@@ -9,7 +9,7 @@
     "test-experiment": "node scripts/run-experiment.js"
   },
   "dependencies": {
-    "agent-trace-outcomes": "^0.1.0",
-    "dotenv": "^16.4.5"
+    "agent-trace-outcomes": "file:../../agent-trace-outcomes",
+    "dotenv": "^16.6.1"
   }
 }
