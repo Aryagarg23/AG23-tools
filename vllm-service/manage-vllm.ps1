@@ -112,7 +112,13 @@ switch ($Action) {
             Write-Host "[Error] Failed to install vLLM inside virtual environment." -ForegroundColor Red
             exit 1
         }
-        
+
+        # vLLM pulls in FlashInfer, which JIT-compiles CUDA kernels at runtime and needs
+        # a full CUDA toolkit (nvcc) that WSL does not provide. Remove it so vLLM falls
+        # back to the prebuilt FlashAttention/Triton backends. See RCA.md.
+        Write-Host "[*] Removing FlashInfer (needs a CUDA toolkit that is not present in WSL)..." -ForegroundColor Cyan
+        wsl -d $distro -u arya $venvPath/bin/pip uninstall -y flashinfer-python flashinfer-cubin
+
         # 5. Generate and configure the systemd service unit
         Write-Host "[6/6] Creating WSL systemd service..." -ForegroundColor Cyan
         $serviceContent = @"
@@ -127,7 +133,7 @@ WorkingDirectory=$wslServiceDir
 ExecStart=$venvPath/bin/python $wslServiceDir/launch.py
 Restart=always
 RestartSec=10
-Environment=PYTHONUNBUFFERED=1 VLLM_DISABLE_FLASHINFER=1 VLLM_ATTENTION_BACKEND=TORCH_SDPA VLLM_ENGINE_READY_TIMEOUT_S=300 VLLM_WORKER_MULTIPROC_METHOD=spawn
+Environment=PYTHONUNBUFFERED=1 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_WORKER_MULTIPROC_METHOD=spawn
 
 [Install]
 WantedBy=multi-user.target
@@ -246,7 +252,7 @@ WantedBy=multi-user.target
         # Get active IPv4 addresses (excluding loopback and virtual adapters)
         $ips = Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notlike "127.*" -and $_.IPAddress -notlike "169.254.*" -and $_.InterfaceAlias -notmatch "vEthernet" } | Select-Object -ExpandProperty IPAddress
         
-        Write-Host "Local host IP: localhost:$port" -ForegroundColor Gray
+        Write-Host "Local host IP: http://127.0.0.1:$port" -ForegroundColor Gray
         foreach ($ip in $ips) {
             Write-Host "LAN Access IP: http://$ip`:$port" -ForegroundColor Green
         }
@@ -272,8 +278,10 @@ WantedBy=multi-user.target
         }
 
         # 6. Test connection and measure response latency
+        # Use 127.0.0.1, not "localhost": localhost resolves to ::1 (IPv6) first, and vLLM
+        # binds IPv4 (0.0.0.0), so an IPv6 request hangs until timeout.
         Write-Host "[4/4] Sending test API request to vLLM..." -ForegroundColor Cyan
-        $testUrl = "http://localhost:$port/v1/models"
+        $testUrl = "http://127.0.0.1:$port/v1/models"
         
         $startTime = Get-Date
         try {

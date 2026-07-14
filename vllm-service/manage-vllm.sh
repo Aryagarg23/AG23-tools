@@ -35,6 +35,12 @@ case "$ACTION" in
         echo "[2/4] Installing vLLM (this will use cache if available)..."
         "$VENV_PATH/bin/pip" install --upgrade pip
         "$VENV_PATH/bin/pip" install vllm
+
+        # vLLM pulls in FlashInfer, which JIT-compiles CUDA kernels at runtime and needs
+        # a full CUDA toolkit (nvcc) that WSL does not provide. Remove it so vLLM falls
+        # back to the prebuilt FlashAttention/Triton backends. See RCA.md.
+        echo "[*] Removing FlashInfer (needs a CUDA toolkit that is not present in WSL)..."
+        "$VENV_PATH/bin/pip" uninstall -y flashinfer-python flashinfer-cubin
         
         # 3. Create systemd service
         echo "[3/4] Creating systemd service..."
@@ -50,7 +56,7 @@ WorkingDirectory=$DIR
 ExecStart=$VENV_PATH/bin/python $DIR/launch.py
 Restart=always
 RestartSec=10
-Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONUNBUFFERED=1 VLLM_USE_FLASHINFER_SAMPLER=0 VLLM_WORKER_MULTIPROC_METHOD=spawn
 
 [Install]
 WantedBy=multi-user.target

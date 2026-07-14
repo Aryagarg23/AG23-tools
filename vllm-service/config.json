@@ -9,7 +9,7 @@
   "max_num_batched_tokens": 4096,
   "enable_chunked_prefill": true,
   "enable_prefix_caching": true,
-  "kv_cache_dtype": "fp8",
+  "kv_cache_dtype": "auto",
   "enable_auto_tool_choice": true,
   "tool_call_parser": "qwen3_coder",
   "enforce_eager": true
