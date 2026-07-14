@@ -57,6 +57,27 @@ cd C:\Users\arya\source\repos\AG23-tools\vllm-service
 
 ---
 
+## 2. Loop-Driven Development Testing Framework (`loop-dev-framework/`)
+
+A verification and testing harness built to test autonomous AI agent development loops and validate performance gains of injecting historic RCA outcomes as context memory.
+
+### Files
+*   `src/`: Engine components (`agent-loop.js`, client wrapper `llm-client.js`, `orchestrator.js`, and `vector-db.js`).
+*   `scripts/`: Executables for building the documentation database and running experiments.
+*   `tasks/`: Sandbox briefs for testing concurrency rate limiting and leap year exceptions.
+*   `docs/`: Detailed LDD research articles, architectures review, and spec gap analysis.
+
+### How to use it:
+Open the `loop-dev-framework` directory, install packages, configure API keys in `.env`, and run tests:
+```bash
+cd loop-dev-framework
+npm install
+npm run build-db
+npm run test-experiment
+```
+
+---
+
 ## Adding more tools
 1. Put the scripts in their own folder.
 2. Keep agent guidelines updated in `.agents/AGENTS.md`.

@@ -1,0 +1,236 @@
+[
+  {
+    "id": "01-introduction.md#chunk-0",
+    "text": "# Introduction to Loop-Driven Development (LDD)",
+    "metadata": {
+      "source": "01-introduction.md",
+      "chunkIndex": 0,
+      "section": "Introduction to Loop-Driven Development (LDD)"
+    }
+  },
+  {
+    "id": "01-introduction.md#chunk-1",
+    "text": "Loop-Driven Development (LDD), also known as Loop Engineering, represents a paradigm shift in how developers build software using Artificial Intelligence.",
+    "metadata": {
+      "source": "01-introduction.md",
+      "chunkIndex": 1,
+      "section": "01-introduction.md"
+    }
+  },
+  {
+    "id": "01-introduction.md#chunk-2",
+    "text": "Instead of traditional, turn-based prompting—where a human writes a prompt, gets code, spots an error, and manually requests a fix—LDD establishes a closed-loop system where the AI operates autonomously to achieve a high-level goal.",
+    "metadata": {
+      "source": "01-introduction.md",
+      "chunkIndex": 2,
+      "section": "01-introduction.md"
+    }
+  },
+  {
+    "id": "01-introduction.md#chunk-3",
+    "text": "## 1. Core Mechanics of LDD\nAn LDD environment wraps an LLM in a self-correcting loop that follows a recurring cycle:\n1. **Plan**: Analyze the task, check repository files, and decide on a set of edits or commands.\n2. **Execute**: Modify the source code or execute diagnostic tools.\n3. **Observe**: Run verification checks (e.g., test suites, linters, types verification) and capture stdout/stderr.\n4. **Correct**: Feed the test errors, lint violations, or compiler outputs back to the LLM to adjust its course, looping until the tests pass or a budget (max iterations) is hit.",
+    "metadata": {
+      "source": "01-introduction.md",
+      "chunkIndex": 3,
+      "section": "1. Core Mechanics of LDD"
+    }
+  },
+  {
+    "id": "01-introduction.md#chunk-4",
+    "text": "```mermaid\ngraph TD\n    Start[Define Goal / Task] --> Plan[Plan: Analyze & Decides Actions]\n    Plan --> Execute[Execute: Modify Code or Run Commands]\n    Execute --> Observe[Observe: Run Verification Tests & Linters]\n    Observe --> Check{Did it Pass?}\n    Check -- No --> Correct[Correct: feed failure logs back to LLM]\n    Correct --> Plan\n    Check -- Yes --> Success[Success & Commit]\n```",
+    "metadata": {
+      "source": "01-introduction.md",
+      "chunkIndex": 4,
+      "section": "01-introduction.md"
+    }
+  },
+  {
+    "id": "01-introduction.md#chunk-5",
+    "text": "## 2. Shift in Developer Responsibility\nIn LDD, the developer's role shifts from writing code and micro-prompting the AI to **Harness Engineering**:\n* **Defining the Acceptance Criteria**: Writing comprehensive, bulletproof unit and integration tests.\n* **Creating the Safety Boundaries**: Setting up the sandbox environment where the agent can run commands without risk of damaging the host machine.\n* **Providing Contextual Memory**: Supplying the agent with previous attempts, design guidelines (`CLAUDE.md`), and failure histories (RCA documents).",
+    "metadata": {
+      "source": "01-introduction.md",
+      "chunkIndex": 5,
+      "section": "2. Shift in Developer Responsibility"
+    }
+  },
+  {
+    "id": "02-architectures.md#chunk-0",
+    "text": "# Architectures of Loop-Driven Development Environments",
+    "metadata": {
+      "source": "02-architectures.md",
+      "chunkIndex": 0,
+      "section": "Architectures of Loop-Driven Development Environments"
+    }
+  },
+  {
+    "id": "02-architectures.md#chunk-1",
+    "text": "Different loop-driven environments employ varying levels of agent autonomy, sandboxing, and interaction hooks. Below is a deep dive into the architectures of the most prominent systems.",
+    "metadata": {
+      "source": "02-architectures.md",
+      "chunkIndex": 1,
+      "section": "02-architectures.md"
+    }
+  },
+  {
+    "id": "02-architectures.md#chunk-2",
+    "text": "## 1. Aider (Interactive Loop)\nAider is designed as a CLI-based coding assistant that integrates tightly with Git.\n* **Orchestration**: Human-in-the-loop. The agent suggests code edits (using unified diffs or whole-file writes), and the human reviews or runs tests.\n* **Test Loop**: Aider has a `--test` command argument. If provided, Aider runs the specified test command after its edit. If the command fails, Aider automatically reads the test output, prompts itself with the error, and tries to fix the code until the tests pass.\n* **State Management**: Git history is the state repository. If the agent makes a mistake, it can rollback using standard Git commands.",
+    "metadata": {
+      "source": "02-architectures.md",
+      "chunkIndex": 2,
+      "section": "1. Aider (Interactive Loop)"
+    }
+  },
+  {
+    "id": "02-architectures.md#chunk-3",
+    "text": "## 2. SWE-agent (Agent-Computer Interface)\nSWE-agent turns LLMs into software engineering agents that resolve issues in real GitHub repositories (specifically SWE-bench).\n* **Orchestration**: Fully autonomous command-line agent.\n* **Agent-Computer Interface (ACI)**: SWE-agent defines a specialized shell environment with custom commands designed for LLMs (e.g., search, view file, edit line, run tests). This prevents the LLM from getting lost in verbose standard terminal outputs.\n* **Execution Loop**:\n  ```\n  [LLM receives ACI state] -> [LLM outputs custom command] -> [ACI parses & executes] -> [ACI returns condensed output] -> [LLM iterates]\n  ```",
+    "metadata": {
+      "source": "02-architectures.md",
+      "chunkIndex": 3,
+      "section": "2. SWE-agent (Agent-Computer Interface)"
+    }
+  },
+  {
+    "id": "02-architectures.md#chunk-4",
+    "text": "## 3. Devin (Cognition)\nDevin represents a highly complex, multi-agent loop system.\n* **Orchestration**: Orchestrator-driven multi-agent team. An orchestrator coordinates subagents (e.g., researcher, planner, coder, debugger).\n* **Sandboxed Environment**: Runs inside a secure, stateful container (Docker) with full terminal access, browser access, and package installation capabilities.\n* **Double Loop**:\n  * *Outer Loop*: High-level planning. Monitors overall progress against user goals.\n  * *Inner Loop*: Action execution. Spawns code/test cycles, inspects browser DOM, debugs syntax issues.",
+    "metadata": {
+      "source": "02-architectures.md",
+      "chunkIndex": 4,
+      "section": "3. Devin (Cognition)"
+    }
+  },
+  {
+    "id": "03-rca-and-feedback.md#chunk-0",
+    "text": "# Root Cause Analysis and Failure Feedback in LDD",
+    "metadata": {
+      "source": "03-rca-and-feedback.md",
+      "chunkIndex": 0,
+      "section": "Root Cause Analysis and Failure Feedback in LDD"
+    }
+  },
+  {
+    "id": "03-rca-and-feedback.md#chunk-1",
+    "text": "A major challenge in autonomous agentic loops is **repetitive failure cycles**. When an agent encounters an edge case that causes a test suite to fail, it may try the same approach (or a minor variation of it) multiple times, burning through API tokens and time.",
+    "metadata": {
+      "source": "03-rca-and-feedback.md",
+      "chunkIndex": 1,
+      "section": "03-rca-and-feedback.md"
+    }
+  },
+  {
+    "id": "03-rca-and-feedback.md#chunk-2",
+    "text": "To resolve this, modern LDD systems are beginning to incorporate **RCA (Root Cause Analysis) Feedback loops**.",
+    "metadata": {
+      "source": "03-rca-and-feedback.md",
+      "chunkIndex": 2,
+      "section": "03-rca-and-feedback.md"
+    }
+  },
+  {
+    "id": "03-rca-and-feedback.md#chunk-3",
+    "text": "## 1. The RCA Feedback Architecture\nAn RCA feedback system modifies the standard agent loop by persisting verified outcomes of previous attempts:\n1. **Detection**: The agent fails to pass the verification suite.\n2. **Analysis**: The agent (or a separate auditor) analyzes the failure logs, performs root cause analysis, and documents the *lesson learned* (e.g., \"The cache key lacks tenant segregation, causing cross-tenant pollution\").\n3. **Storage**: The lesson is saved locally in the repository (e.g., using `.agent-trace/outcomes/` or Git Notes).\n4. **Context Injection**: On subsequent runs, before the agent starts editing that component, the framework queries the store for past failure records matching the modified file paths and injects them as active context.",
+    "metadata": {
+      "source": "03-rca-and-feedback.md",
+      "chunkIndex": 3,
+      "section": "1. The RCA Feedback Architecture"
+    }
+  },
+  {
+    "id": "03-rca-and-feedback.md#chunk-4",
+    "text": "```\n                  ┌──────────────────────┐\n                  │   Developer / Agent  │\n                  └──────────┬───────────┘\n                             │ edits src/auth/\n                             ▼\n                  ┌──────────────────────┐\n                  │    queryLessons()    │\n                  └──────────┬───────────┘\n                             │ matches path glob\n                             ▼\n          ┌──────────────────────────────────────┐\n          │ Loaded Lessons:                      │\n          │ \"Do not use MD5 for token hashes     │\n          │  because collision tests fail.\"     │\n          └──────────────────┬───────────────────┘\n                             │ injected into prompt\n                             ▼\n                  ┌──────────────────────┐\n                  │   Agent Avoids MD5   │\n                  └──────────────────────┘\n```",
+    "metadata": {
+      "source": "03-rca-and-feedback.md",
+      "chunkIndex": 4,
+      "section": "03-rca-and-feedback.md"
+    }
+  },
+  {
+    "id": "03-rca-and-feedback.md#chunk-5",
+    "text": "## 2. Hypothesis: Does RCA Feedback Help?\nThis framework is built to test the following hypothesis:\n* **Null Hypothesis ($H_0$)**: Providing past failure reasons and lessons learned does not significantly improve the agent's completion rate or efficiency.\n* **Alternative Hypothesis ($H_1$)**: Providing past failure reasons and lessons learned significantly reduces the number of loop iterations required to solve a task and prevents repeating known failure modes.",
+    "metadata": {
+      "source": "03-rca-and-feedback.md",
+      "chunkIndex": 5,
+      "section": "2. Hypothesis: Does RCA Feedback Help?"
+    }
+  },
+  {
+    "id": "03-rca-and-feedback.md#chunk-6",
+    "text": "We will use the `agent-trace-outcomes` library to test this. The library's `recordOutcome` function allows us to log verification checks and lessons, and `queryLessons` retrieves them at context-assembly time based on file path globs.",
+    "metadata": {
+      "source": "03-rca-and-feedback.md",
+      "chunkIndex": 6,
+      "section": "03-rca-and-feedback.md"
+    }
+  },
+  {
+    "id": "04-library-spec-gaps.md#chunk-0",
+    "text": "# Specification Analysis & Identified Gaps in agent-trace-outcomes",
+    "metadata": {
+      "source": "04-library-spec-gaps.md",
+      "chunkIndex": 0,
+      "section": "Specification Analysis & Identified Gaps in agent-trace-outcomes"
+    }
+  },
+  {
+    "id": "04-library-spec-gaps.md#chunk-1",
+    "text": "This document reviews the `agent-trace-outcomes` specification (`SPEC.md`) and identifies gaps, limitations, and future feature proposals discovered during the implementation of our loop-driven development testing framework.",
+    "metadata": {
+      "source": "04-library-spec-gaps.md",
+      "chunkIndex": 1,
+      "section": "04-library-spec-gaps.md"
+    }
+  },
+  {
+    "id": "04-library-spec-gaps.md#chunk-2",
+    "text": "## 1. Identified Gaps & Shortcomings",
+    "metadata": {
+      "source": "04-library-spec-gaps.md",
+      "chunkIndex": 2,
+      "section": "1. Identified Gaps & Shortcomings"
+    }
+  },
+  {
+    "id": "04-library-spec-gaps.md#chunk-3",
+    "text": "### Gap A: Lacks Verdict-Based Filtering in Query API\n*   **Current State**: The `queryLessons({ paths, tags })` and `queryLog({ path })` APIs only filter by file path and lesson tags.\n*   **The Issue**: AI agents running in development loops specifically need to separate **successful outcomes** (to replicate patterns that worked) from **failed outcomes** (to avoid repeating errors). Loading the entire history and manually filtering is inefficient and wastes agent tokens.\n*   **Proposal**: Add `verdict` and `status` filters to the query API:\n    ```ts\n    queryLessons({ paths: [\"src/\"], verdict: \"failed\" })\n    ```",
+    "metadata": {
+      "source": "04-library-spec-gaps.md",
+      "chunkIndex": 3,
+      "section": "Gap A: Lacks Verdict-Based Filtering in Query API"
+    }
+  },
+  {
+    "id": "04-library-spec-gaps.md#chunk-4",
+    "text": "### Gap B: No Standardized Git Diff / Code Hunk Storage\n*   **Current State**: The specification includes `vcs: { type: \"git\", revision: \"sha\" }` but has no field for capturing the exact code diff that was tested.\n*   **The Issue**: A commit SHA alone is not sufficient if the agent is inspecting historic checks on a branch without checking out the code. In multi-agent systems, seeing the exact diff alongside the failure reason allows the agent to analyze *why* it failed without performing git operations.\n*   **Proposal**: Introduce an optional `diff` or `hunks` array in the standard schema:\n    ```json\n    \"vcs\": {\n      \"type\": \"git\",\n      \"revision\": \"c9d8e7f...\",\n      \"diff\": \"--- a/lib/rate-limiter.js\\n++ b/lib/rate-limiter.js...\"\n    }\n    ```\n    *Note: Currently, we must use the custom `metadata` namespace extension as a workaround.*",
+    "metadata": {
+      "source": "04-library-spec-gaps.md",
+      "chunkIndex": 4,
+      "section": "Gap B: No Standardized Git Diff / Code Hunk Storage"
+    }
+  },
+  {
+    "id": "04-library-spec-gaps.md#chunk-5",
+    "text": "### Gap C: The \"Uncommitted / Dirty Workspace\" Friction\n*   **Current State**: The library requires `vcs.revision` to be a valid commit SHA, defaulting to `HEAD`.\n*   **The Issue**: In loop-driven development, agents run tests on uncommitted (dirty) code to check if an approach works. Recording this check's outcome against `HEAD` is misleading because `HEAD` represents the *previous* commit. This forces frameworks to make temporary/dummy git commits for every test run, bloating the git log.\n*   **Proposal**: Add native support for a `\"dirty\"` revision status or an optional `workspace_state: \"dirty\"` flag, allowing checks to be recorded against the current uncommitted state.",
+    "metadata": {
+      "source": "04-library-spec-gaps.md",
+      "chunkIndex": 5,
+      "section": "Gap C: The \"Uncommitted / Dirty Workspace\" Friction"
+    }
+  },
+  {
+    "id": "04-library-spec-gaps.md#chunk-6",
+    "text": "## 2. Framework Workarounds (The Tech Demo)",
+    "metadata": {
+      "source": "04-library-spec-gaps.md",
+      "chunkIndex": 6,
+      "section": "2. Framework Workarounds (The Tech Demo)"
+    }
+  },
+  {
+    "id": "04-library-spec-gaps.md#chunk-7",
+    "text": "To showcase the extensibility of `agent-trace-outcomes` and overcome these gaps, our advanced loop framework implements:\n1.  **Aider-Style Git commits**: The loop engine automatically runs `git commit` at every iteration before running tests. This assigns each test outcome to a unique, real commit SHA.\n2.  **Metadata Diff Capturing**: We capture `git diff HEAD~1` post-commit and write it into the outcome using the vendor metadata extension block:\n    ```json\n    \"metadata\": {\n      \"org.loop-dev.demo\": {\n        \"diff\": \"...\",\n        \"iteration\": 2\n      }\n    }\n    ```\n3.  **Local Indexing**: We run our `SimpleVectorDB` on top of these JSON outcomes and docs for semantic retrieval, bypassing the library's path-only glob matching.",
+    "metadata": {
+      "source": "04-library-spec-gaps.md",
+      "chunkIndex": 7,
+      "section": "04-library-spec-gaps.md"
+    }
+  }
+]
