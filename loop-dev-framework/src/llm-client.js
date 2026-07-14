@@ -12,16 +12,20 @@ export class LLMClient {
   constructor() {
     this.geminiKey = process.env.GEMINI_API_KEY || '';
     this.openaiKey = process.env.OPENAI_API_KEY || '';
+    // OPENAI_BASE_URL lets the OpenAI-compatible path target any server that speaks the
+    // Chat Completions API — e.g. a local vLLM at http://localhost:8000/v1. When set, no real
+    // OpenAI key is required (a dummy is sent). See journal/01-issues-to-open.md #4.
+    this.openaiBaseUrl = process.env.OPENAI_BASE_URL || '';
     this.ollamaModel = process.env.OLLAMA_MODEL || '';
     this.ollamaHost = process.env.OLLAMA_HOST || 'http://localhost:11434';
-    this.useSimulator = process.env.USE_SIMULATOR === 'true' || (!this.geminiKey && !this.openaiKey && !this.ollamaModel);
+    this.useSimulator = process.env.USE_SIMULATOR === 'true' || (!this.geminiKey && !this.openaiKey && !this.openaiBaseUrl && !this.ollamaModel);
 
     if (this.useSimulator) {
       console.log('[LLM Client] Running in SIMULATION mode.');
     } else if (this.geminiKey) {
       console.log('[LLM Client] Running with real Gemini API.');
-    } else if (this.openaiKey) {
-      console.log('[LLM Client] Running with real OpenAI API.');
+    } else if (this.openaiKey || this.openaiBaseUrl) {
+      console.log(`[LLM Client] Running with OpenAI-compatible API${this.openaiBaseUrl ? ` (base: ${this.openaiBaseUrl})` : ''}.`);
     } else if (this.ollamaModel) {
       console.log(`[LLM Client] Running with local Ollama API (Model: ${this.ollamaModel}, Host: ${this.ollamaHost}).`);
     }
@@ -37,7 +41,7 @@ export class LLMClient {
 
     if (this.geminiKey) {
       return this.callGemini(systemPrompt, userPrompt);
-    } else if (this.openaiKey) {
+    } else if (this.openaiKey || this.openaiBaseUrl) {
       return this.callOpenAI(systemPrompt, userPrompt);
     } else if (this.ollamaModel) {
       return this.callOllama(systemPrompt, userPrompt);
@@ -82,13 +86,14 @@ export class LLMClient {
    */
   async callOpenAI(systemPrompt, userPrompt) {
     const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-    const url = 'https://api.openai.com/v1/chat/completions';
-    
+    const base = (this.openaiBaseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    const url = `${base}/chat/completions`;
+
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.openaiKey}`
+        'Authorization': `Bearer ${this.openaiKey || 'sk-local'}`
       },
       body: JSON.stringify({
         model,

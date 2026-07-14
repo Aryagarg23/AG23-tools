@@ -1,0 +1,8 @@
+# Dependencies (reinstalled via `npm install`)
+node_modules/
+
+# Ephemeral per-run loop workspaces created by scripts/run-one.js and the orchestrator
+workspace-*/
+
+# Outcome records written into ephemeral workspaces (the durable ones live in the journal repo)
+**/.agent-trace/
