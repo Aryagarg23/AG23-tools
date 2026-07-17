@@ -77,6 +77,9 @@ def build(repo, out=None):
             "repo": repo_name,
             "provenance": gc.provenance(src, EXTRACTOR, "deterministic"),
         })
+        date = gc.source_date(e["path"])
+        if date:
+            nodes[-1]["date"] = date
 
     graph = {
         "profile": "investigation",
