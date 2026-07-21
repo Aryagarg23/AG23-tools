@@ -1,5 +1,7 @@
 import json
 import os
+import shutil
+import subprocess
 import sys
 
 def main():
@@ -48,16 +50,21 @@ def main():
             
     print(f"Starting vLLM with command: {' '.join(cmd)}")
     sys.stdout.flush()
-    
-    # Find vllm executable in the same bin directory as python (virtual env bin)
+
+    # Resolve the vllm executable: prefer the one next to the current
+    # interpreter (virtual env Scripts/bin dir) since that's the env vllm
+    # was installed into, falling back to whatever PATH provides.
     venv_bin_dir = os.path.dirname(sys.executable)
-    vllm_path = os.path.join(venv_bin_dir, "vllm")
-    
-    if os.path.exists(vllm_path):
-        cmd[0] = vllm_path
-        
-    # Execute and replace current processes
-    os.execv(cmd[0], cmd)
+    vllm_path = shutil.which("vllm", path=venv_bin_dir) or shutil.which("vllm")
+
+    if not vllm_path:
+        print("Error: could not find 'vllm' executable on PATH or next to the current Python interpreter", file=sys.stderr)
+        sys.exit(1)
+
+    cmd[0] = vllm_path
+
+    result = subprocess.run(cmd)
+    sys.exit(result.returncode)
 
 if __name__ == "__main__":
     main()

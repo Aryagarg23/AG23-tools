@@ -4,13 +4,21 @@
   "port": 8000,
   "tensor_parallel_size": 1,
   "gpu_memory_utilization": 0.91,
-  "max_model_len": 16384,
-  "max_num_seqs": 32,
+  "max_model_len": 32768,
+  "max_num_seqs": 8,
   "max_num_batched_tokens": 4096,
   "enable_chunked_prefill": true,
   "enable_prefix_caching": true,
   "kv_cache_dtype": "auto",
   "enable_auto_tool_choice": true,
   "tool_call_parser": "qwen3_coder",
-  "compilation_config": {"cudagraph_mode": "FULL_DECODE_ONLY", "cudagraph_capture_sizes": [1, 2, 4, 8, 16]}
+  "compilation_config": {
+    "cudagraph_mode": "FULL_DECODE_ONLY",
+    "cudagraph_capture_sizes": [
+      1,
+      2,
+      4,
+      8
+    ]
+  }
 }
