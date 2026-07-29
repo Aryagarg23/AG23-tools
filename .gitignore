@@ -19,3 +19,8 @@ vllm-service/env-config.json
 .idea/
 .DS_Store
 Thumbs.db
+
+# graphify derived artifacts
+graphify-out/
+.graphify_analysis.json
+.graphify_labels.json
