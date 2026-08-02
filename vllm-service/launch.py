@@ -5,7 +5,6 @@ import subprocess
 import sys
 
 def main():
-    # Resolve script directory
     script_dir = os.path.dirname(os.path.abspath(__file__))
     config_path = os.path.join(script_dir, "config.json")
     
@@ -20,17 +19,13 @@ def main():
         print(f"Error: Failed to parse config.json: {e}", file=sys.stderr)
         sys.exit(1)
         
-    # Get the vLLM model
     model = config.get("model")
     if not model:
         print("Error: 'model' key is required in config.json", file=sys.stderr)
         sys.exit(1)
         
-    # Build arguments list
-    # We will invoke `vllm serve <model>`
     cmd = ["vllm", "serve", model]
     
-    # Define mapping of config keys to vllm CLI arguments
     for key, val in config.items():
         if key == "model":
             continue

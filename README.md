@@ -19,3 +19,6 @@ See details: [`vllm-service/README.md`](./vllm-service/README.md)
   started 2026-07-14 and abandoned the same day when development forked into
   `loop_test_journal/loop-dev-framework`, which has continued to evolve (deep-eval,
   entropy-race, issue-scout benches) and is the live copy. This one was a stale duplicate.
+- `research-process/` (moved 2026-08-02) — the research orchestration engine, split out
+  with history to the private `Aryagarg23/research-process` repo. `loom` and
+  `adaption-findings` now point at `~/projects/research-process`.
